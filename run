@@ -1,0 +1,5 @@
+INCLUDE=/opt/jdk1.8.0_65/include
+javac Crypt.java
+gcc -I$INCLUDE -I$INCLUDE/linux -fPIC -c Crypt.c
+gcc -shared -Wl,-soname,libcrypt.so -o libcrypt.so Crypt.o
+sudo /opt/jdk1.8.0_65/bin/java -Djava.library.path=. Crypt

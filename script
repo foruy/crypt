@@ -1,0 +1,8 @@
+sudo brctl addbr brserver
+sudo brctl addbr brclient
+sudo brctl addif brserver taps0
+sudo brctl addif brclient tapc0
+sudo ifconfig brserver up
+sudo ifconfig brclient up
+sudo ifconfig taps0 up
+sudo ifconfig tapc0 up
