@@ -52,12 +52,29 @@ static int open_device(char *dev)
 	return fd;
 }
 
+unsigned short csum(unsigned short *buf, int nwords)
+{
+	unsigned long sum;
+	for (sum = 0; nwords > 0; nwords--)
+		sum += *buf++;
+	sum = (sum >> 16) + (sum & 0xffff);
+	sum += (sum >> 16);
+	return ~sum;
+}
+
 static int write_data(int fd, struct Msg *msg)
 {
 	char *wptr;
 	int bytes_write, rest_write = msg->hlen + msg->dlen;
 	char buf[rest_write];
+        struct ethhdr *ehdr = (struct ethhdr *) msg->header;
 
+	if (ntohs(ehdr->h_proto) == ETH_P_IP) {
+		struct iphdr *iph = (struct iphdr *) (msg->header + sizeof(struct ethhdr));
+		iph->tot_len = htons(rest_write - sizeof(struct ethhdr));
+		iph->check = 0;
+		iph->check = csum((unsigned short *) iph, iph->ihl << 1);
+	}
 	memcpy(buf, msg->header, msg->hlen);
 	memcpy(buf + msg->hlen, msg->data, msg->dlen);
 	wptr = buf;
@@ -101,9 +118,11 @@ printf("read bytes: %d\n", bytes_read);
 	// Encrypt and Decrypt if ip packet, and redirected for arp packet,
         // else dropped
 	if (ntohs(ehdr->h_proto) == ETH_P_IP) {
+		struct iphdr *iph = (struct iphdr *) (writebuf + sizeof(struct ethhdr));
 		msg->enc = enc;
 		msg->header = (char *) ehdr;
-		msg->hlen = sizeof(struct ethhdr) + sizeof(struct iphdr);
+		//msg->hlen = sizeof(struct ethhdr) + sizeof(struct iphdr);
+		msg->hlen = sizeof(struct ethhdr) + (iph->ihl * 4);
 		msg->data = writebuf + msg->hlen;
 		msg->dlen = total_read - msg->hlen;
 	} else if (ntohs(ehdr->h_proto) == ETH_P_ARP) {
